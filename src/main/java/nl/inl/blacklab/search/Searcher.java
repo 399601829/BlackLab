@@ -22,6 +22,7 @@ import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.Collator;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -30,6 +31,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
@@ -2091,6 +2094,92 @@ public class Searcher {
 
 	public IndexSearcher getIndexSearcher() {
 		return indexSearcher;
+	}
+
+	/**
+	 * Get a set of all (non-deleted) Lucene document ids.
+	 * @return set of ids
+	 */
+	public Set<Integer> docIdSet() {
+
+		final int maxDoc = reader.maxDoc();
+
+		final Bits liveDocs = MultiFields.getLiveDocs(reader);
+
+		return new AbstractSet<Integer>() {
+			@Override
+			public boolean contains(Object o) {
+				Integer i = (Integer)o;
+				return i < maxDoc && !isDeleted(i);
+			}
+
+			boolean isDeleted(Integer i) {
+				return liveDocs != null && !liveDocs.get(i);
+			}
+
+			@Override
+			public boolean isEmpty() {
+				return maxDoc == reader.numDeletedDocs() + 1;
+			}
+
+			@Override
+			public Iterator<Integer> iterator() {
+				return new Iterator<Integer>() {
+					int current = -1;
+					int next = -1;
+
+					@Override
+					public boolean hasNext() {
+						if (next < 0)
+							findNext();
+						return next < maxDoc;
+					}
+
+					private void findNext() {
+						next = current + 1;
+						while (next < maxDoc && isDeleted(next)) {
+							next++;
+						}
+					}
+
+					@Override
+					public Integer next() {
+						if (next < 0)
+							findNext();
+						if (next >= maxDoc)
+							throw new NoSuchElementException();
+						current = next;
+						next = -1;
+						return current;
+					}
+
+					@Override
+					public void remove() {
+						throw new UnsupportedOperationException();
+					}
+				};
+			}
+
+			@Override
+			public int size() {
+				return maxDoc - reader.numDeletedDocs() - 1;
+			}
+		};
+	}
+
+	/** A task to perform on a Lucene document. */
+	public interface LuceneDocTask {
+		void perform(Document doc);
+	}
+
+	/**
+	 * Perform a task on each (non-deleted) Lucene Document.
+	 * @param task task to perform
+	 */
+	public void forEachDocument(LuceneDocTask task) {
+		for (Integer docId: docIdSet()) {
+			task.perform(document(docId));
+		}
 	}
 
 

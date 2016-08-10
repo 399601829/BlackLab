@@ -483,4 +483,22 @@ public class FileUtil {
 			out.close();
 		}
 	}
+
+	/**
+	 * Add a parenthesized number to a file name to get a file name that doesn't exist yet.
+	 *
+	 * @param file the file that exists already
+	 * @return a file with a number added that doesn't exist yet
+	 */
+	public static File addNumberToExistingFileName(File file) {
+		File parentFile = file.getParentFile();
+		String name = file.getName();
+		int number = 2;
+		File newFile;
+		do {
+			newFile = new File(parentFile, name + " (" + number + ")");
+			number++;
+		} while(newFile.exists());
+		return newFile;
+	}
 }
