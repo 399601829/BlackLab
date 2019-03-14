@@ -15,8 +15,8 @@ import nl.inl.util.FileUtil;
 public class ExportCorpus {
 
 	public static void main(String[] args) throws IOException {
-		if (args.length != 2) {
-			System.out.println("Usage: ExportCorpus <indexDir> <exportDir>");
+		if (args.length != 2 && args.length != 3) {
+			System.out.println("Usage: ExportCorpus <indexDir> <exportDir> [fromInputPath]");
 			System.exit(1);
 		}
 
@@ -35,9 +35,14 @@ public class ExportCorpus {
 			System.out.println("Directory doesn't exist or cannot write to it: " + exportDir);
 			System.exit(1);
 		}
+		
+		String fromInputPath = null;
+		if (args.length == 3) {
+		    fromInputPath = args[2];
+		}
 
 		ExportCorpus exportCorpus = new ExportCorpus(indexDir);
-		exportCorpus.export(exportDir);
+		exportCorpus.export(exportDir, fromInputPath);
 	}
 
 	Searcher searcher;
@@ -49,7 +54,7 @@ public class ExportCorpus {
 	/** Export the whole corpus.
 	 * @param exportDir directory to export to
 	 */
-	private void export(final File exportDir) {
+	private void export(final File exportDir, final String fromInputPath) {
 
 		final IndexReader reader = searcher.getIndexReader();
 
@@ -62,23 +67,25 @@ public class ExportCorpus {
 			@Override
 			public void perform(Document doc) {
 				String fromInputFile = doc.get("fromInputFile");
-				System.out.println(fromInputFile);
-				String xml = searcher.getContent(doc);
-				File file = new File(exportDir, fromInputFile);
-				if (file.exists()) {
-					// Add a number so we don't have to overwrite the previous file.
-					file = FileUtil.addNumberToExistingFileName(file);
-				}
-				File dir = file.getParentFile();
-				if (!dir.exists())
-					dir.mkdirs(); // create any subdirectories required
-				try (PrintWriter pw = FileUtil.openForWriting(file)) {
-					pw.write(xml);
-				}
-				docsDone++;
-				if (docsDone % 100 == 0) {
-					int perc = docsDone * 100 / totalDocs;
-					System.out.println(docsDone + " docs exported (" + perc + "%)...");
+				if (fromInputPath == null || fromInputFile.startsWith(fromInputPath)) {
+    				System.out.println(fromInputFile);
+    				String xml = searcher.getContent(doc);
+    				File file = new File(exportDir, fromInputFile);
+    				if (file.exists()) {
+    					// Add a number so we don't have to overwrite the previous file.
+    					file = FileUtil.addNumberToExistingFileName(file);
+    				}
+    				File dir = file.getParentFile();
+    				if (!dir.exists())
+    					dir.mkdirs(); // create any subdirectories required
+    				try (PrintWriter pw = FileUtil.openForWriting(file)) {
+    					pw.write(xml);
+    				}
+    				docsDone++;
+    				if (docsDone % 100 == 0) {
+    					int perc = docsDone * 100 / totalDocs;
+    					System.out.println(docsDone + " docs exported (" + perc + "%)...");
+    				}
 				}
 			}
 		});

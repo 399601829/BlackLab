@@ -33,9 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import nl.inl.util.ExUtil;
-
 import com.gs.collections.impl.factory.Maps;
+
+import nl.inl.util.ExUtil;
 
 /**
  * Store string content by id in a directory of compound files with a TOC file. Quickly retrieve
@@ -780,7 +780,14 @@ public class ContentStoreDirUtf8 extends ContentStoreDirAbstract {
 
 					// 3 - take just what we need
 					int firstChar = a % e.blockSizeCharacters;
-					result[i] = decoded.toString().substring(firstChar, firstChar + b - a);
+                    String decodedStr = decoded.toString();
+                    try {
+                        result[i] = decodedStr.substring(firstChar, firstChar + b - a);
+                    } catch (StringIndexOutOfBoundsException e1) {
+                        throw new RuntimeException("ERROR!\ndecodedStr.length() = " + decodedStr.length() + "\n" +
+                                "firstChar = " + firstChar + "\na = " + a + "\nb = " + b +
+                                "\nfirstBlock = " + firstBlock + "\nlastBlock = " + lastBlock, e1);
+                    }
 				}
 			} finally {
 				fileInputStream.close();
