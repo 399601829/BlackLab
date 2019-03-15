@@ -69,18 +69,27 @@ public class ExportCorpus {
 				String fromInputFile = doc.get("fromInputFile");
 				if (fromInputPath == null || fromInputFile.startsWith(fromInputPath)) {
     				System.out.println(fromInputFile);
-    				String xml = searcher.getContent(doc);
-    				File file = new File(exportDir, fromInputFile);
-    				if (file.exists()) {
-    					// Add a number so we don't have to overwrite the previous file.
-    					file = FileUtil.addNumberToExistingFileName(file);
-    				}
-    				File dir = file.getParentFile();
-    				if (!dir.exists())
-    					dir.mkdirs(); // create any subdirectories required
-    				try (PrintWriter pw = FileUtil.openForWriting(file)) {
-    					pw.write(xml);
-    				}
+    				String xml = "";
+    				boolean skip = false;
+                    try {
+                        xml = searcher.getContent(doc);
+                    } catch (RuntimeException e) {
+                        System.out.println("Exception exporting document " + fromInputFile + ", skipping");
+                        skip = true;
+                    }
+                    if (!skip) {
+        				File file = new File(exportDir, fromInputFile);
+        				if (file.exists()) {
+        					// Add a number so we don't have to overwrite the previous file.
+        					file = FileUtil.addNumberToExistingFileName(file);
+        				}
+        				File dir = file.getParentFile();
+        				if (!dir.exists())
+        					dir.mkdirs(); // create any subdirectories required
+        				try (PrintWriter pw = FileUtil.openForWriting(file)) {
+        					pw.write(xml);
+        				}
+                    }
     				docsDone++;
     				if (docsDone % 100 == 0) {
     					int perc = docsDone * 100 / totalDocs;
